@@ -22,6 +22,8 @@ Chunks.prototype.end = function (err) {
   this.ended = err || true
   if(err && err !== true && this.sink)
     this.sink.end(err)
+  else
+    this.resume()
 }
 
 Chunks.prototype.resume = function () {
@@ -29,7 +31,6 @@ Chunks.prototype.resume = function () {
   var h
   while(!this.ended && (h = this._header(this.bl)) && !this.sink.paused) {
     var value = this._body(this.bl)
-    console.log(value)
     if(value !== undefined) this.sink.write(value)
     else {
       this.ended = true
@@ -37,9 +38,15 @@ Chunks.prototype.resume = function () {
       if(this.source) this.source.abort()
     }
   }
+  if(this.ended && this.sink && !this.sink.ended)
+    this.sink.end(this.ended === true ? null : this.ended)
+
   if(!h && this.source) this.source.resume()
 }
 
-Chunks.prototype.pipe = require('push-stream/pipe')
+Chunks.prototype.abort = function (err) {
+  this.source.abort(this.ended = err)
+}
 
+Chunks.prototype.pipe = require('push-stream/pipe')
 
